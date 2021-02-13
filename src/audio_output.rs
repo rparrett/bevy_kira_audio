@@ -1,4 +1,8 @@
-use crate::audio::{Audio, AudioCommands, PlayAudioSettings};
+use crate::{
+    audio::{Audio, AudioCommands, PlayAudioSettings},
+    AudioInitialization,
+};
+
 use bevy::prelude::*;
 
 use crate::channel::AudioChannel;
@@ -272,9 +276,24 @@ impl Default for ChannelState {
 pub fn play_queued_audio_system(world: &mut World) {
     let world = world.cell();
 
-    let mut audio_output = world.get_non_send_mut::<AudioOutput>().unwrap();
-    let mut audio = world.get_resource_mut::<Audio>().unwrap();
-    if let Some(audio_sources) = world.get_resource::<Assets<AudioSource>>() {
+    if let (Some(mut audio_output), Some(mut audio), Some(audio_sources)) = (
+        world.get_non_send_mut::<AudioOutput>(),
+        world.get_resource_mut::<Audio>(),
+        world.get_resource::<Assets<AudioSource>>(),
+    ) {
         audio_output.run_queued_audio_commands(&*audio_sources, &mut *audio);
     };
+}
+
+pub fn initialize_audio_system(world: &mut World) {
+    if let Some(mut init) = world.get_resource_mut::<AudioInitialization>() {
+        if !init.needed || init.done {
+            return;
+        }
+
+        init.done = true;
+        init.needed = false;
+    }
+
+    world.insert_non_send(AudioOutput::default());
 }
