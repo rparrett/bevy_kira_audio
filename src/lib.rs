@@ -35,7 +35,7 @@ mod audio_output;
 mod channel;
 mod source;
 
-use crate::audio_output::{play_queued_audio_system, AudioOutput};
+use crate::audio_output::{initialize_audio_system, play_queued_audio_system};
 
 pub use channel::AudioChannel;
 
@@ -71,10 +71,41 @@ use crate::source::WavLoader;
 #[derive(Default)]
 pub struct AudioPlugin;
 
+/// TODO document how this helps get audio workinging in wasm
+/// builds in chrome.
+///
+/// ```edition2018
+/// # use bevy_kira_audio::AudioInitialization;
+/// app.insert_resource(AudioInitialization {
+///     needed: false,
+///     ..Default::default()
+/// })
+/// ```
+///
+/// app.add_plugins(AudioPlugin)
+/// ```edition2018
+/// commands.insert_resource(AudioInitialization {
+///     needed: true,
+///     ..Default::default()
+/// })
+pub struct AudioInitialization {
+    /// Should the audio manager be initialized at the next opportunity?
+    pub needed: bool,
+    /// Has the audio manager already been initialized?
+    pub done: bool,
+}
+impl Default for AudioInitialization {
+    fn default() -> Self {
+        AudioInitialization {
+            needed: true,
+            done: false,
+        }
+    }
+}
+
 impl Plugin for AudioPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.init_non_send_resource::<AudioOutput>()
-            .add_asset::<AudioSource>();
+        app.add_asset::<AudioSource>();
 
         #[cfg(feature = "mp3")]
         app.init_asset_loader::<Mp3Loader>();
@@ -85,7 +116,14 @@ impl Plugin for AudioPlugin {
         #[cfg(feature = "flac")]
         app.init_asset_loader::<FlacLoader>();
 
-        app.init_resource::<Audio>()
-            .add_system_to_stage(stage::POST_UPDATE, play_queued_audio_system.exclusive_system());
+        app.init_resource::<Audio>().add_system_to_stage(
+            stage::POST_UPDATE,
+            play_queued_audio_system.exclusive_system(),
+        );
+        app.init_resource::<AudioInitialization>()
+            .add_system_to_stage(
+                stage::POST_UPDATE,
+                initialize_audio_system.exclusive_system(),
+            );
     }
 }
