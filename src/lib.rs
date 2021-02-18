@@ -117,12 +117,12 @@ impl Plugin for AudioPlugin {
         app.init_asset_loader::<FlacLoader>();
 
         app.init_resource::<Audio>().add_system_to_stage(
-            stage::POST_UPDATE,
+            CoreStage::PostUpdate,
             play_queued_audio_system.exclusive_system(),
         );
         app.init_resource::<AudioInitialization>()
             .add_system_to_stage(
-                stage::POST_UPDATE,
+                CoreStage::PostUpdate,
                 initialize_audio_system.exclusive_system(),
             );
     }
